@@ -1,0 +1,5 @@
+exportPattern("^[[:alpha:]]+")
+importFrom("grDevices", "dev.off", "pdf")
+importFrom("graphics", "plot")
+S3method(plot, mccf1)
+S3method(summary, mccf1)
