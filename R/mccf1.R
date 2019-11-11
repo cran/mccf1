@@ -1,24 +1,27 @@
-library(ROCR)
-library(ggplot2)
 
-#' MCC (Matthews correlation coefficient) - F1
+#' Perform MCCF1 analysis
 #'
-#' This function creates the "mccf1" object.
-#' @param response a vector of actual values (0 or 1) in binary classification.
-#' @param predictor a vector of predicted values (between 0 and 1) in binary classification.
-#' @return the "mccf1" object, which is basically a list containing a vector of thresholds, a vector of corresponding normalized MCC, and a vector of corresponding F1.
+#' `mccf1()` performs MCC (Matthews correlation coefficient)-F1 analysis for paired vectors
+#' of binary response classes and fractional prediction scores representing the performance of
+#' a binary classification task.
+#' @param response numeric vector representing ground truth classes (0 or 1).
+#' @param predictor numeric vector representing prediction scores (in the range [0,1]).
+#' @return S3 object of class "mccf1", a list with the following members: `thresholds`: vector of
+#' doubles describing the thresholds; `normalized_mcc`: vector of doubles representing normalized
+#' MCC for each threshold; `f1`: vector of doubles representing F1 for each threshold.
 #' @examples
-#' response <- c(rep(1, 1000), rep(0, 10000))
+#' response <- c(rep(1L, 1000L), rep(0L, 10000L))
 #' set.seed(2017)
-#' predictor <- c(rbeta(300, 12, 2), rbeta(700, 3, 4), rbeta(10000, 2, 3))
+#' predictor <- c(rbeta(300L, 12, 2), rbeta(700L, 3, 4), rbeta(10000L, 2, 3))
 #' x <- mccf1(response, predictor)
-#' head(x$normalizedMCC)
-#' # [1]  NaN 0.5150763 0.5213220 0.5261152 0.5301566 0.5337177
-#' head(x$F1)
-#' # [1]  NaN 0.001998002 0.003992016 0.005982054 0.007968127 0.009950249
 #' head(x$thresholds)
 #' # [1]  Inf 0.9935354 0.9931493 0.9930786 0.9925507 0.9900520
+#' head(x$normalized_mcc)
+#' # [1]  NaN 0.5150763 0.5213220 0.5261152 0.5301566 0.5337177
+#' head(x$f1)
+#' # [1]  NaN 0.001998002 0.003992016 0.005982054 0.007968127 0.009950249
 
+#' @export
 mccf1 <- function(response, predictor){
   # get a performance object based on the classification
   pred <- ROCR::prediction(predictor, response)
@@ -32,29 +35,28 @@ mccf1 <- function(response, predictor){
   # get the thresholds
   thresholds <- attr(perf, "alpha.values")[[1]]
 
-  res = list(normalizedMCC = mcc.nor, F1 = f1, thresholds = thresholds)
+  res = list(normalized_mcc = mcc.nor, f1 = f1, thresholds = thresholds)
   class(res)="mccf1"
   return(res)
 }
 
 #' Plot the MCC-F1 curve
 #'
-#' This function plots the MCC-F1 score curve using ggplot.
-#' @param x "mccf1" object resulting from the function mccf1
-#' @param main main title of the plot (default: "the MCC-F1 score curve")
+#' `autoplot.mccf1()` plots the MCC-F1 curve using ggplot2.
+#' @param object S3 object of class "mccf1" from the `mccf1()`
 #' @param xlab,ylab x- and y- axis annotation (default: "F1 score","normalized MCC")
-#' @param .curveFileName character string, used for naming pdf file of the plot with \code{\link[grDevices]{pdf}} (if this argument is present, the plot will be stored in pdf with specified file name)
-#' @param ... further arguments passed to and from methods
-#' @return the ggplot object
+#' @param ... further arguments passed to and from method `ggplot()`
+#' @return the ggplots object
 #' @examples
 #' response <- c(rep(1, 1000), rep(0, 10000))
 #' predictor <- c(rbeta(300, 12, 2), rbeta(700, 3, 4), rbeta(10000, 2, 3))
-#' plot(mccf1(response, predictor))
+#' autoplot(mccf1(response, predictor))
 
-plot.mccf1 <- function(x, main = "the MCC-F1 score curve", xlab = "F1 score", ylab = "normalized MCC", .curveFileName, ...){
-  # get rid of NaN values in the vectors of mcc.nor and f1
-  mcc.nor_truncated <- x$normalizedMCC[2: (length(x$normalizedMCC) - 1)]
-  f_truncated <- x$F1[2: (length(x$F1) - 1)]
+#' @import ggplot2
+#' @export
+autoplot.mccf1 <- function(object, xlab = "F1 score", ylab = "normalized MCC", ...){
+  mcc.nor_truncated <- object$normalized_mcc[2: (length(object$normalized_mcc) - 1)]
+  f_truncated <- object$f1[2: (length(object$f1) - 1)]
 
   f <- m <- NULL
 
@@ -62,33 +64,27 @@ plot.mccf1 <- function(x, main = "the MCC-F1 score curve", xlab = "F1 score", yl
   mccf1_df <- data.frame(f = f_truncated,  m = mcc.nor_truncated)
 
   # plot the MCC-F1 curve
-  mccf1_plot = ggplot2::ggplot(mccf1_df, ggplot2::aes(x = f, y = m, ymin = 0, ymax = 1, xmin = 0, xmax = 1)) +
+  ggplot2::ggplot(mccf1_df, ggplot2::aes(x = f, y = m, ymin = 0, ymax = 1, xmin = 0, xmax = 1)) +
     ggplot2::geom_point(size = 0.2, shape = 21, fill = "white")+
     ggplot2::theme(plot.title = ggplot2::element_text(hjust = 0.5))+
     ggplot2::coord_equal(ratio = 1)+
-    ggplot2::labs(x = xlab, y = ylab, title = main)
+    ggplot2::labs(x = xlab, y = ylab)
 
-  plot(mccf1_plot)
-
-  if (!missing(.curveFileName)){
-    pdf(file = .curveFileName)
-    plot(mccf1_plot)
-    dev.off()
-  }
 }
 
 #' Summarize the the performance of a binary classification using MCC-F1 metric and the best threshold
 #'
-#' This function calculates the MCC-F1 metric and the best threshold for a binary classification.
-#' @param object "mccf1" object resulting from the function mccf1
-#' @param digits an integer, used for number formatting with \code{\link[base]{signif}}
-#' @param bins an integer, will be used to divide the range of normalized MCC when calculating the MCC-F1 metric (default = 100)
-#' @param ... further arguments passed to and from methods
-#' @return a data.frame that shows the MCC-F1 metric (between 0 and 1) and the best threshold (between 0 and 1)
+#' `summary.mccf1()` calculates the MCC-F1 metric and the best threshold for a binary classification.
+#' @param object S3 object of class "mccf1" object resulting from the function `mccf1()`
+#' @param digits integer, used for number formatting with \code{\link[base]{signif}}
+#' @param bins integer, representing number of bins used to divide up the range of normalized MCC
+#' when calculating the MCC-F1 metric (default = 100L)
+#' @param ... other arguments ignored (for compatibility with generic)
+#' @return data.frame that shows the MCC-F1 metric (in the range [0,1]) and the best threshold (in the range [0,1])
 #' @examples
-#' response <- c(rep(1, 1000), rep(0, 10000))
+#' response <- c(rep(1L, 1000L), rep(0L, 10000L))
 #' set.seed(2017)
-#' predictor <- c(rbeta(300, 12, 2), rbeta(700, 3, 4), rbeta(10000, 2, 3))
+#' predictor <- c(rbeta(300L, 12, 2), rbeta(700L, 3, 4), rbeta(10000L, 2, 3))
 #' \dontrun{summary(mccf1(response, predictor))}
 #' # mccf1_metric best_threshold
 #' #    0.3508904       0.786905
@@ -99,10 +95,11 @@ plot.mccf1 <- function(x, main = "the MCC-F1 score curve", xlab = "F1 score", yl
 #' # mccf1_metric best_threshold
 #' #    0.351          0.787
 
+#' @export
 summary.mccf1 <- function(object, digits, bins = 100, ...){
   # get rid of NaN values in the vectors of mcc.nor and F1
-  mcc.nor_truncated <- object$normalizedMCC[2: (length(object$normalizedMCC) - 1)]
-  f_truncated <- object$F1[2: (length(object$F1) - 1)]
+  mcc.nor_truncated <- object$normalized_mcc[2: (length(object$normalized_mcc) - 1)]
+  f_truncated <- object$f1[2: (length(object$f1) - 1)]
 
   # get the index of the point with largest normalized MCC ("point" refers to the point on the MCC-F1 curve)
   index_of_max_mcc <- which.max(mcc.nor_truncated)

@@ -7,24 +7,25 @@
 \method{summary}{mccf1}(object, digits, bins = 100, ...)
 }
 \arguments{
-\item{object}{"mccf1" object resulting from the function mccf1}
+\item{object}{S3 object of class "mccf1" object resulting from the function `mccf1()`}
 
-\item{digits}{an integer, used for number formatting with \code{\link[base]{signif}}}
+\item{digits}{integer, used for number formatting with \code{\link[base]{signif}}}
 
-\item{bins}{an integer, will be used to divide the range of normalized MCC when calculating the MCC-F1 metric (default = 100)}
+\item{bins}{integer, representing number of bins used to divide up the range of normalized MCC
+when calculating the MCC-F1 metric (default = 100L)}
 
-\item{...}{further arguments passed to and from methods}
+\item{...}{other arguments ignored (for compatibility with generic)}
 }
 \value{
-a data.frame that shows the MCC-F1 metric (between 0 and 1) and the best threshold (between 0 and 1)
+data.frame that shows the MCC-F1 metric (in the range [0,1]) and the best threshold (in the range [0,1])
 }
 \description{
-This function calculates the MCC-F1 metric and the best threshold for a binary classification.
+`summary.mccf1()` calculates the MCC-F1 metric and the best threshold for a binary classification.
 }
 \examples{
-response <- c(rep(1, 1000), rep(0, 10000))
+response <- c(rep(1L, 1000L), rep(0L, 10000L))
 set.seed(2017)
-predictor <- c(rbeta(300, 12, 2), rbeta(700, 3, 4), rbeta(10000, 2, 3))
+predictor <- c(rbeta(300L, 12, 2), rbeta(700L, 3, 4), rbeta(10000L, 2, 3))
 \dontrun{summary(mccf1(response, predictor))}
 # mccf1_metric best_threshold
 #    0.3508904       0.786905
